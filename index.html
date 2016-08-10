@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Proyecto Ejemplo</title>
+  <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+  <script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+  <script type='text/javascript'>
+
+  // $(document).bind('mobileinit',function(){
+  //   $.mobile.pushStateEnabled = false;
+  // });
+
+  function login(){
+    $.ajax({
+      data: {user: $('#user').val(), password: $('#password').val() },
+      type: "GET",
+      dataType: "json",
+      url: "http://finanzaPersonal.tribus.com.uy/login",
+      success: function(data){
+        var db = openDatabase('mydb', '1.0', 'Test DB', 2 * 1024 * 1024);
+        db.transaction(execute,error,success);
+        function execute(tx){
+          tx.executeSql('CREATE TABLE IF NOT EXISTS LOGS (id unique, log)');
+          tx.executeSql('INSERT INTO LOGS (id, log) VALUES (1, "foobar")');
+        }
+
+        function error(tx, err) {
+          alert("Error processing SQL: "+err);
+        }
+
+        function success() {
+          alert("success!");
+        }
+        // $.mobile.loading("hide");
+        // if (data.resultado_operacion === "OK") {
+        //   alert("FALLO");
+        // } else {
+        //   if (data.resultado_login) {
+        //     $.mobile.changePage("#menu");
+        //   } else {
+        //     alert("The user/password combination is wrong");
+        //   }
+        // }
+      }
+    });
+  }
+  </script>
+</head>
+<body>
+
+  <div data-role="page" id="home">
+    <div data-role="header">
+      <h1>Login</h1>
+    </div>
+    <div data-role="main" class="ui-content">
+      <form method="post" action="demoform.asp">
+        <div class="ui-field-contain">
+          <label for="user">Usuario: </label>
+          <input type="text" name="user" id="user">
+        </div>
+        <div class="ui-field-contain">
+          <label for="password">Contrasena: </label>
+          <input type="text" name="password" id="password">
+        </div>
+        <div class="ui-field-contain">
+          <p><a href="#register" data-role="link" data-inline="true">Registrarse</a></p>
+        </div>
+        <div class="ui-field-contain">
+          <a data-role='button' onclick='$.mobile.loading("show"); login();'>Entrar</a>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed" data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="register">
+    <div data-role="header">
+      <h1>Registro</h1>
+    </div>
+    <div data-role="main" class="ui-content">
+      <form method="post">
+        <div class="ui-field-contain">
+          <label for="user">Nombre de Usuario: </label>
+          <input type="text" name="addUser" id="addUser">
+        </div>
+        <div class="ui-field-contain">
+          <label for="password">Ingrese la contrasena: </label>
+          <input type="text" name="addPassword" id="addPassword">
+        </div>
+        <div class="ui-field-contain">
+          <p><a href="#home" data-role="button" >Registrarse</a></p>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="firstEntry">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Menu</h1>
+      <p><a href="#home" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Home</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div>
+        <form method="post" action="demoform.asp">
+          <div class="ui-field-contain">
+            <label for="fullname">Nombre: </label>
+            <input type="text" name="fullname" id="fullname">
+          </div>
+          <div class="ui-field-contain">
+            <label for="currency">Moneda: </label>
+            <select name="currency" id="currency" data-native-menu="false">
+              <option value="usd">Dólares</option>
+              <option value="uyu">Peso Uruguayo</option>
+            </select>
+          </div>
+          <div class="ui-field-contain">
+            <label for="balance">Saldo inicial:</label>
+            <input type="text" name="email" id="balance" placeholder="Ingrese el importe">
+          </div>
+          <div class="ui-field-contain">
+            <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="menu">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Menu</h1>
+      <p><a href="#home" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Home</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div data-role="controlgroup" data-type="vertical">
+        <a href="#expenses" class="ui-btn">Agregar Gasto</a>
+        <a href="#income" class="ui-btn">Agregar Ingreso</a>
+        <a href="#account" class="ui-btn">Estado de cuenta</a>
+      </div>
+    </div>
+    <div data-role="footer" data-position="fixed" data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="expenses">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Gastos</h1>
+      <p><a href="#menu" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Menu</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div>
+        <form method="post" action="demoform.asp">
+          <div class="ui-field-contain">
+            <label for="expenseDate">Fecha: </label>
+            <input type="date" name="expenseDate" id="expenseDate">
+          </div>
+          <div class="ui-field-contain">
+            <label for="expenseAmount">Importe: </label>
+            <input type="text" name="expenseAmount" id="expenseAmount">
+          </div>
+          <div class="ui-field-contain">
+            <label for="categoryLabel">Categoria: </label>
+            <select name="category" id="category" data-native-menu="false">
+              <option value="home">Hogar</option>
+              <option value="presents">Regalos</option>
+              <option value="expenses">Gastos</option>
+              <option value="taxes">Impuestos</option>
+              <option value="clothes">Ropa</option>
+              <option value="supermarket">Supermercado</option>
+              <option value="restorant">Restaurantes</option>
+            </select>
+          </div>
+          <div class="ui-field-contain">
+            <label for="switch">Repetir:</label>
+            <input type="checkbox" data-role="flipswitch" name="switch" id="switch" data-inline="true" checked>
+          </div>
+          <div class="ui-field-contain" id="repeat">
+            <label for="repeatTypeLabel">Cada: </label>
+            <select name="repeatType" id="repeatType" data-native-menu="false">
+              <option value="month">Mes</option>
+              <option value="day">Dia</option>
+              <option value="week">Semana</option>
+            </select>
+          </div>
+          <div class="ui-field-contain">
+            <label for="repeatDeadline">Termina en: </label>
+            <input type="date" name="repeatDeadline" id="repeatDeadline">
+          </div>
+          <div class="ui-field-contain">
+            <label for="noteExpenses">Nota: </label>
+            <textarea name="noteExpenses" id="noteExpenses"></textarea>
+          </div>
+          <div class="ui-field-contain">
+            <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="income">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Ingresos</h1>
+      <p><a href="#menu" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Menu</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <form method="post" action="demoform.asp">
+        <div class="ui-field-contain">
+          <label for="incomeDate">Fecha: </label>
+          <input type="date" name="incomeDate" id="incomeDate">
+        </div>
+        <div class="ui-field-contain">
+          <label for="incomeAmount">Importe: </label>
+          <input type="text" name="incomeAmount" id="incomeAmount">
+        </div>
+        <div class="ui-field-contain">
+          <label for="clientLabel">Categoria: </label>
+          <select name="clientDdl" id="clientDdl" data-native-menu="false"></select>
+
+        </div>
+        <div class="ui-field-contain">
+          <a href="#AddClient" class="ui-btn ui-shadow ui-corner-all ui-icon-plus ui-btn-icon-notext" data-inline="true" data-mini="true"></a>
+        </div>
+        <div class="ui-field-contain">
+          <label for="noteExpenses">Nota: </label>
+          <textarea name="noteExpenses" id="noteExpenses"></textarea>
+        </div>
+        <div class="ui-field-contain">
+          <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed" data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="transfer">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Ingresos</h1>
+      <p><a href="#menu" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Menu</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div>
+        <form method="post" action="demoform.asp">
+          <div class="ui-field-contain">
+            <label for="incomeDate">Fecha: </label>
+            <input type="date" name="incomeDate" id="incomeDate">
+          </div>
+          <div class="ui-field-contain">
+            <label for="incomeAmount">Importe: </label>
+            <input type="text" name="incomeAmount" id="incomeAmount">
+          </div>
+          <div class="ui-field-contain">
+            <label for="clientLabel">Categoria: </label>
+            <select name="clientDdl" id="clientDdl" data-native-menu="false"></select>
+
+          </div>
+          <div class="ui-field-contain">
+            <a href="#AddClient" class="ui-btn ui-shadow ui-corner-all ui-icon-plus ui-btn-icon-notext" data-inline="true" data-mini="true"></a>
+          </div>
+          <div class="ui-field-contain">
+            <label for="noteExpenses">Nota: </label>
+            <textarea name="noteExpenses" id="noteExpenses"></textarea>
+          </div>
+          <div class="ui-field-contain">
+            <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="account">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Estado de cuenta</h1>
+      <p><a href="#menu" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Menu</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div>
+        <form method="post" action="demoform.asp">
+          <div class="ui-grid-b">
+            <div class="ui-block-a">Block A</div>
+            <div class="ui-block-b">Block B</div>
+            <div class="ui-block-c">Block C</div>
+          </div>
+          <div class="ui-field-contain">
+            <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+</body>
+</html>
