@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Proyecto Ejemplo</title>
+  <title>Proyecto Otro</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.1/jquery.mobile-1.2.1.min.css" />
@@ -13,70 +13,56 @@
 
   </script>
   <script src="http://code.jquery.com/mobile/1.2.1/jquery.mobile-1.2.1.min.js"></script>
-  <script>
-
-  function register(){
+</head>
+<body>
+  <!-- Expenses -->
+  <script type="text/javascript">
+  $(document).ready(function(){
+    loadExpensesCategories();
+    loadIncomeCategories();
+  });
+  function loadExpensesCategories(){
+    $.mobile.loading("show");
     $.ajax({
-      data:{userT: $('#user').val(), passwordT: $('#password').val()},
-      type: "POST",
-      dataType: "json",
-      url:"http://finanzaPersonal.tribus.com.uy/login",
-      success: function(data){
-        var db = window.openDatabase('BdFinzanzas', '1.0', 'Test DB', 2 * 1024 * 1024);
-        // db.transaction(execute,error,success);
-        db.transaction(function(tx){
-          tx.executeSql("CREATE TABLE IF NOT EXISTS USERS(user unique, password unique)",[],function(tx,results){
-            tx.executeSql("INSERT INTO USERS (user,password) values (userT,passwordT)");
-          });
-        },errorInicio, successInicio);
-        function errorInicio(){
-
-        }
-        function successInicio(){
-          db.transaction(function(tx){
-            tx.executeSql("SELECT * FROM USERS",[],function(tx,results){
-              for(var i = 0; i < results.rows.length; i++){
-                console.log(results.rows.item(i).user);
-              }
-            })
-          })
-        }
-      }
-    })
-  }
-
-  function login(){
-    $.ajax({
-      data: {user: $('#user').val(), password: $('#password').val() },
       type: "GET",
       dataType: "json",
-      url: "http://finanzaPersonal.tribus.com.uy/login",
+      url: "http://finanzapersonal.tribus.com.uy/categoriasIngresos",
       success: function(data){
-        var db =  window.openDatabase('mydb', '1.0', 'Test DB', 2 * 1024 * 1024);
-        db.transaction(execute,error,success);
-        function execute(tx){
-          tx.executeSql('SELECT * from USERS',[], selectSucces, error);
-        }
-        function selectSuccess(tx, results) {
-          for (var i = 0; i < results.rows.length; i++){
-            console.log(results.rows.item(i).name);
-          }
-        }
-
-        function error(tx, err) {
-          alert("Error processing SQL: "+ err);
-        }
-
-        function success() {
-          alert("success!");
-        }
-
+        resultsExpenses = data;
+        showListExpenses();
       }
     });
   }
+  function showListExpenses(){
+     console.log(resultsExpenses);
+    for(var i = 0; i < resultsExpenses.length ; i++){
+      var aux = resultsExpenses[i];
+      $('#category').append("<option value="+ i +">" + aux +"</option>");
+    }
+  }
+  function loadIncomeCategories(){
+    $.mobile.loading("show");
+    $.ajax({
+      type: "GET",
+      dataType: "json",
+      url: "http://finanzapersonal.tribus.com.uy/categoriasGastos",
+      success: function(data){
+        resultsIncome = data;
+        showListIncome();
+      }
+    });
+  }
+  function showListIncome(){
+     console.log(resultsIncome);
+    for(var i = 0; i < resultsIncome.length ; i++){
+      var aux = resultsIncome[i];
+      $('#clientDdl').append("<option value="+ i +">" + aux +"</option>");
+    }
+  }
+
+
+
   </script>
-</head>
-<body>
 
   <div data-role="page" id="home">
     <div data-role="header">
@@ -120,7 +106,7 @@
           <input type="text" name="addPassword" id="addPassword">
         </div>
         <div class="ui-field-contain">
-            <a data-role='button' onclick='$.mobile.loading("show"); register();'>Entrar</a>
+          <a data-role='button' onclick='$.mobile.loading("show"); register();'>Entrar</a>
         </div>
       </form>
     </div>
@@ -199,13 +185,13 @@
           <div class="ui-field-contain">
             <label for="categoryLabel">Categoria: </label>
             <select name="category" id="category" data-native-menu="false">
-              <option value="home">Hogar</option>
+              <!-- <option value="home">Hogar</option>
               <option value="presents">Regalos</option>
               <option value="expenses">Gastos</option>
               <option value="taxes">Impuestos</option>
               <option value="clothes">Ropa</option>
               <option value="supermarket">Supermercado</option>
-              <option value="restorant">Restaurantes</option>
+              <option value="restorant">Restaurantes</option> -->
             </select>
           </div>
           <div class="ui-field-contain">
@@ -256,8 +242,9 @@
         </div>
         <div class="ui-field-contain">
           <label for="clientLabel">Categoria: </label>
-          <select name="clientDdl" id="clientDdl" data-native-menu="false"></select>
+          <select name="clientDdl" id="clientDdl" data-native-menu="false">
 
+          </select>
         </div>
         <div class="ui-field-contain">
           <a href="#AddClient" class="ui-btn ui-shadow ui-corner-all ui-icon-plus ui-btn-icon-notext" data-inline="true" data-mini="true"></a>
