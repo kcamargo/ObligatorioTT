@@ -17,10 +17,14 @@
 <body>
   <!-- Expenses -->
   <script type="text/javascript">
+    var db = window.openDatabase('BdFinzanzas', '1.0', 'Test DB', 2 * 1024 * 1024);
   $(document).ready(function(){
+    bdStart();
     loadExpensesCategories();
     loadIncomeCategories();
+
   });
+
   function loadExpensesCategories(){
     $.mobile.loading("show");
     $.ajax({
@@ -59,7 +63,24 @@
       $('#clientDdl').append("<option value="+ i +">" + aux +"</option>");
     }
   }
+  function bdStart(){
+    db.transaction(function(tx){
+      tx.executeSql("CREATE TABLE IF NOT EXISTS USERS(user unique, password unique)",[],function(tx,results){
+        tx.executeSql("INSERT INTO USERS (user,password) values ('kari',1234)");
+      });
+    },errorInicio,successInicio);
+  }
+  function errorInicio(){
 
+  }
+
+  function successInicio(){
+    db.transaction(function(tx){
+      tx.executeSql("SELECT * FROM USERS",[],function(tx,results){
+      console.log(results);
+      });
+    });
+  }
 
 
   </script>
