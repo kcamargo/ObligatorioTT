@@ -18,69 +18,100 @@
   <!-- Expenses -->
   <script type="text/javascript">
     var db = window.openDatabase('BdFinzanzas', '1.0', 'Test DB', 2 * 1024 * 1024);
-  $(document).ready(function(){
-    bdStart();
-    loadExpensesCategories();
-    loadIncomeCategories();
+
+    $(document).ready(function() {
+      bdStart();
+      loadExpensesCategories();
+      loadIncomeCategories();
+      // register();
+      login();
+
+      /*
+      * Set Up
+      */
+      $("#register-button").bind("tap", function () {
+        $.mobile.loading("show");
+        var user =  $("#userA").val();
+        var password = $('#passwordA').val();
+        var onSuccess = function () {
+          $.mobile.loading("hide");
+          $.mobile.changePage( "#menu", { transition: "slideup"} );
+        };
+        register(user, password, onSuccess);
+      });
+      $("#login-button").bind("tap", function () {
+        $.mobile.loading("show");
+        var user =  $("#userLogin").val();
+        var password = $('#passwordLogin').val();
+        var onSuccess = function () {
+          $.mobile.loading("hide");
+          $.mobile.changePage( "#menu", { transition: "slideup"} );
+        };
+        login(user, password, onSuccess);
+      });
+
+
 
   });
 
   function loadExpensesCategories(){
-    $.mobile.loading("show");
     $.ajax({
       type: "GET",
       dataType: "json",
       url: "http://finanzapersonal.tribus.com.uy/categoriasIngresos",
-      success: function(data){
-        resultsExpenses = data;
-        showListExpenses();
-      }
+      // success: function(data) {
+      //   showListExpenses(data);
+      // }
+      success: showListExpenses
     });
   }
-  function showListExpenses(){
-     console.log(resultsExpenses);
-    for(var i = 0; i < resultsExpenses.length ; i++){
-      var aux = resultsExpenses[i];
-      $('#category').append("<option value="+ i +">" + aux +"</option>");
+
+  function showListExpenses(expenses) {
+    for (var i = 0; i < expenses.length ; i++) {
+      $('#category').append("<option value="+ i +">" + expenses[i] +"</option>");
     }
   }
+
   function loadIncomeCategories(){
-    $.mobile.loading("show");
     $.ajax({
       type: "GET",
       dataType: "json",
       url: "http://finanzapersonal.tribus.com.uy/categoriasGastos",
-      success: function(data){
-        resultsIncome = data;
-        showListIncome();
-      }
+      success: showListIncome
     });
   }
-  function showListIncome(){
-     console.log(resultsIncome);
-    for(var i = 0; i < resultsIncome.length ; i++){
-      var aux = resultsIncome[i];
-      $('#clientDdl').append("<option value="+ i +">" + aux +"</option>");
+
+  function showListIncome(income){
+    for(var i = 0; i < income.length ; i++){
+      $('#clientDdl').append("<option value="+ i +">" + income[i] +"</option>");
     }
   }
-  function bdStart(){
+
+  function bdStart (onError, onSuccess) {
     db.transaction(function(tx){
       tx.executeSql("CREATE TABLE IF NOT EXISTS USERS(user unique, password unique)",[],function(tx,results){
         tx.executeSql("INSERT INTO USERS (user,password) values ('kari',1234)");
       });
-    },errorInicio,successInicio);
-  }
-  function errorInicio(){
-
+    }, onError, onSuccess);
   }
 
-  function successInicio(){
+  /*
+  * Database Access
+  */
+
+  function register(user, password, onSuccess) {
+    db.transaction(function(tx) {
+      tx.executeSql("INSERT INTO USERS(user,password) values ('"+ user + "','" + password +"')", [], onSuccess);
+    });
+  }
+
+  function login(user, password, onSuccess){
     db.transaction(function(tx){
-      tx.executeSql("SELECT * FROM USERS",[],function(tx,results){
-      console.log(results);
+      tx.executeSql("SELECT distinct users.name FROM USERS where users.password = '" + password + "')",[],function(tx,results){
       });
     });
   }
+
 
 
   </script>
@@ -92,18 +123,18 @@
     <div data-role="main" class="ui-content">
       <form method="post" action="demoform.asp">
         <div class="ui-field-contain">
-          <label for="user">Usuario: </label>
-          <input type="text" name="user" id="user">
+          <label for="userLogin">Usuario: </label>
+          <input type="text" name="userLogin" id="userLogin">
         </div>
         <div class="ui-field-contain">
-          <label for="password">Contrasena: </label>
-          <input type="text" name="password" id="password">
+          <label for="passwordLogin">Contrasena: </label>
+          <input type="text" name="passwordLogin" id="passwordLogin">
         </div>
         <div class="ui-field-contain">
           <p><a href="#register" data-role="link" data-inline="true">Registrarse</a></p>
         </div>
         <div class="ui-field-contain">
-          <a data-role='button' onclick='$.mobile.loading("show"); login();'>Entrar</a>
+          <a id='login-button' data-role='button'>Entrar</a>
         </div>
       </form>
     </div>
@@ -120,14 +151,14 @@
       <form method="post">
         <div class="ui-field-contain">
           <label for="user">Nombre de Usuario: </label>
-          <input type="text" name="addUser" id="addUser">
+          <input type="text" name="user" id="userA">
         </div>
         <div class="ui-field-contain">
           <label for="password">Ingrese la contrasena: </label>
-          <input type="text" name="addPassword" id="addPassword">
+          <input type="text" name="password" id="passwordA">
         </div>
         <div class="ui-field-contain">
-          <a data-role='button' onclick='$.mobile.loading("show"); register();'>Entrar</a>
+          <a id='register-button' data-role='button'>Entrar</a>
         </div>
       </form>
     </div>
