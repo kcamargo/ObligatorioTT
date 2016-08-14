@@ -21,10 +21,9 @@
 
     $(document).ready(function() {
       bdStart();
+      createBdAccount();
       loadExpensesCategories();
       loadIncomeCategories();
-      // register();
-      login();
 
       /*
       * Set Up
@@ -39,6 +38,7 @@
         };
         register(user, password, onSuccess);
       });
+
       $("#login-button").bind("tap", function () {
         $.mobile.loading("show");
         var user =  $("#userLogin").val();
@@ -50,6 +50,18 @@
         login(user, password, onSuccess);
       });
 
+      // $("#addExpenses-button").bind("tap", function () {
+      //   $.mobile.loading("show");
+      //   var expAmount = $('#expensesAmount').val();
+      //   var expDate =  $("#expensesDate").val();
+      //   var expCategory = $('#category').val();
+      //   var onSuccess = function () {
+      //     $.mobile.loading("hide");
+      //     $.mobile.changePage( "#menu", { transition: "slideup"} );
+      //   };
+      //   login(expAmount, expDate, expCategory, onSuccess);
+      // });
+
 
 
   });
@@ -58,7 +70,7 @@
     $.ajax({
       type: "GET",
       dataType: "json",
-      url: "http://finanzapersonal.tribus.com.uy/categoriasIngresos",
+      url: "http://finanzapersonal.tribus.com.uy/categoriasGastos",
       // success: function(data) {
       //   showListExpenses(data);
       // }
@@ -76,7 +88,7 @@
     $.ajax({
       type: "GET",
       dataType: "json",
-      url: "http://finanzapersonal.tribus.com.uy/categoriasGastos",
+      url: "http://finanzapersonal.tribus.com.uy/categoriasIngresos",
       success: showListIncome
     });
   }
@@ -95,6 +107,12 @@
     }, onError, onSuccess);
   }
 
+  function createBdAccount (onError, onSuccess) {
+    db.transaction(function(tx){
+      tx.executeSql("CREATE TABLE IF NOT EXISTS ACCOUNT(tipo, importe, fecha, categoria)",[],function(tx,results){
+      });
+    }, onError, onSuccess);
+  }
   /*
   * Database Access
   */
@@ -105,12 +123,22 @@
     });
   }
 
-  function login(user, password, onSuccess){
+  // function login(user, password, onSuccess){
+  //   db.transaction(function(tx){
+  //     tx.executeSql("SELECT distinct users.name FROM USERS where users.password = '" + password + "' and users.name = '" + name + "'", [], onSuccess);
+  //   });
+  // }
+  function addExpensesToAccount (importe, fecha, categoria, onSuccess){
     db.transaction(function(tx){
-      tx.executeSql("SELECT distinct users.name FROM USERS where users.password = '" + password + "')",[],function(tx,results){
-      });
+      tx.executeSql("INSERT INTO ACCOUNT (tipo, importe, fecha, categoria) values ('"+ "Gasto" + "','" + importe +"','" + fecha +"','"+ categoria +"')", [], onSuccess);
     });
   }
+  function addIncomesToAccount (importe, fecha, categoria, onSuccess){
+    db.transaction(function(tx){
+      tx.executeSql("INSERT INTO ACCOUNT (tipo, importe, fecha, categoria) values ('"+ "Ingreso" + "','" + importe +"','" + fecha +"','"+ categoria +"')", [], onSuccess);
+    });
+  }
+
 
 
 
@@ -208,9 +236,9 @@
     </div>
     <div data-role="main" class="ui-content">
       <div data-role="controlgroup" data-type="vertical">
-        <a href="#expenses" class="ui-btn">Agregar Gasto</a>
-        <a href="#income" class="ui-btn">Agregar Ingreso</a>
-        <a href="#account" class="ui-btn">Estado de cuenta</a>
+        <a href="#expenses" data-role="button">Agregar Gasto</a>
+        <a href="#income" data-role="button">Agregar Ingreso</a>
+        <a href="#account" data-role="button">Estado de cuenta</a>
       </div>
     </div>
     <div data-role="footer" data-position="fixed" data-id="footer">
@@ -228,23 +256,15 @@
         <form method="post" action="demoform.asp">
           <div class="ui-field-contain">
             <label for="expenseDate">Fecha: </label>
-            <input type="date" name="expenseDate" id="expenseDate">
+            <input type="date" name="expenseDate" id="expensesDate">
           </div>
           <div class="ui-field-contain">
             <label for="expenseAmount">Importe: </label>
-            <input type="text" name="expenseAmount" id="expenseAmount">
+            <input type="text" name="expenseAmount" id="expensesAmount">
           </div>
           <div class="ui-field-contain">
             <label for="categoryLabel">Categoria: </label>
-            <select name="category" id="category" data-native-menu="false">
-              <!-- <option value="home">Hogar</option>
-              <option value="presents">Regalos</option>
-              <option value="expenses">Gastos</option>
-              <option value="taxes">Impuestos</option>
-              <option value="clothes">Ropa</option>
-              <option value="supermarket">Supermercado</option>
-              <option value="restorant">Restaurantes</option> -->
-            </select>
+            <select name="category" id="category" data-native-menu="false"></select>
           </div>
           <div class="ui-field-contain">
             <label for="switch">Repetir:</label>
@@ -267,7 +287,7 @@
             <textarea name="noteExpenses" id="noteExpenses"></textarea>
           </div>
           <div class="ui-field-contain">
-            <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+              <a id='addExpenses-button' data-role='button'>Entrar</a>
           </div>
         </div>
       </form>
@@ -306,7 +326,7 @@
           <textarea name="noteExpenses" id="noteExpenses"></textarea>
         </div>
         <div class="ui-field-contain">
-          <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+          <a id='addIncome-button' data-role='button'>Guardar</a>
         </div>
       </form>
     </div>
