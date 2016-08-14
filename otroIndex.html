@@ -17,11 +17,31 @@
 <body>
   <!-- Expenses -->
   <script type="text/javascript">
+
+  /*
+  * GET:
+  * URL: http://finanzapersonal.tribus.com.uy/login?user=kari&password=1234
+  * Headers: Metadata que manda el navegador
+  *   Soy un chrome
+  *   Acepto que me devuelvas json
+  */
+
+  /*
+  * POST:
+  * URL: http://finanzapersonal.tribus.com.uy/register
+  * Headers: Metadata que manda el navegador
+  *   Soy un chrome
+  *   Acepto que me devuelvas json
+  * Body:
+  *   userT=kari&passwordT=1234
+  */
+
     var db = window.openDatabase('BdFinzanzas', '1.0', 'Test DB', 2 * 1024 * 1024);
+    var isLogged = false;
 
     $(document).ready(function() {
-      bdStart();
-      createBdAccount();
+      initializeDB();
+      // createBdAccount();
       loadExpensesCategories();
       loadIncomeCategories();
 
@@ -32,9 +52,11 @@
         $.mobile.loading("show");
         var user =  $("#userA").val();
         var password = $('#passwordA').val();
-        var onSuccess = function () {
+        var onSuccess = function (data) {
+          debugger;
           $.mobile.loading("hide");
-          $.mobile.changePage( "#menu", { transition: "slideup"} );
+          $.mobile.changePage( "#firstEntry", { transition: "slideup"} );
+          isLogged = data.resultado_operacion === "OK";
         };
         register(user, password, onSuccess);
       });
@@ -43,26 +65,56 @@
         $.mobile.loading("show");
         var user =  $("#userLogin").val();
         var password = $('#passwordLogin').val();
-        var onSuccess = function () {
+        var onSuccess = function (data) {
           $.mobile.loading("hide");
-          $.mobile.changePage( "#menu", { transition: "slideup"} );
+          isLogged = data.resultado_operacion === "OK" && data.resultado_login;
+          if (isLogged) {
+            $.mobile.changePage( "#menu", { transition: "slideup"} );
+          } else {
+            // TODO: Implementar
+          }
         };
         login(user, password, onSuccess);
       });
 
-      // $("#addExpenses-button").bind("tap", function () {
-      //   $.mobile.loading("show");
-      //   var expAmount = $('#expensesAmount').val();
-      //   var expDate =  $("#expensesDate").val();
-      //   var expCategory = $('#category').val();
-      //   var onSuccess = function () {
-      //     $.mobile.loading("hide");
-      //     $.mobile.changePage( "#menu", { transition: "slideup"} );
-      //   };
-      //   login(expAmount, expDate, expCategory, onSuccess);
-      // });
+      $("#add-account-save").bind("tap", function () {
+        $.mobile.loading("show");
+        var name =  $("#add-account-name").val();
+        var currency = $('#add-account-currency').val();
+        var balance = Number($("#add-account-balance").val());
+        var onSuccess = function () {
+          $.mobile.loading("hide");
+          $.mobile.changePage( "#list-accounts", { transition: "slideup"} );
+        };
+        addAccount(name, currency, balance, onSuccess);
+      });
 
+      $(document).bind("pagechange", function (event, data) {
 
+        if (data.toPage.attr("id") === "list-accounts") {
+          var onSuccess = function (tx, result) {
+            var accounts = result.rows;
+            for (var i = 0; i < accounts.length; i++) {
+              $("#list-accounts-list").append("<li><a href='#update-account' data-id='" + accounts[i].rowid + "'>" + accounts[i].name + " " + accounts[i].currency + " (" + accounts[i].initialBalance + ")</a></li>");
+            }
+            $("#list-accounts-list").listview("refresh");
+          };
+          getAccounts(onSuccess);
+        }
+
+        if (data.toPage.attr("id") === "update-account") {
+          var id = $(data.options.link).data("id");
+          var onSuccess = function (account) {
+            debugger
+            $.mobile.loading("hide");
+            $("#update-account-id").val(account.rowid);
+            $("#update-account-name").val(account.name);
+            $("#update-account-currency").val(account.currency);
+            $("#update-account-balance").val(account.initialBalance);
+          };
+          getAccount(id, onSuccess);
+        }
+      });
 
   });
 
@@ -99,40 +151,70 @@
     }
   }
 
-  function bdStart (onError, onSuccess) {
-    db.transaction(function(tx){
-      tx.executeSql("CREATE TABLE IF NOT EXISTS USERS(user unique, password unique)",[],function(tx,results){
-        tx.executeSql("INSERT INTO USERS (user,password) values ('kari',1234)");
-      });
-    }, onError, onSuccess);
-  }
-
-  function createBdAccount (onError, onSuccess) {
-    db.transaction(function(tx){
-      tx.executeSql("CREATE TABLE IF NOT EXISTS ACCOUNT(tipo, importe, fecha, categoria)",[],function(tx,results){
-      });
-    }, onError, onSuccess);
-  }
   /*
-  * Database Access
+  * Data Base
   */
 
-  function register(user, password, onSuccess) {
-    db.transaction(function(tx) {
-      tx.executeSql("INSERT INTO USERS(user,password) values ('"+ user + "','" + password +"')", [], onSuccess);
+  function initializeDB (onError, onSuccess) {
+    db.transaction(function (tx) {
+      tx.executeSql("CREATE TABLE IF NOT EXISTS ACCOUNTS (name, currency, initialBalance)", []);
     });
   }
 
-  // function login(user, password, onSuccess){
-  //   db.transaction(function(tx){
-  //     tx.executeSql("SELECT distinct users.name FROM USERS where users.password = '" + password + "' and users.name = '" + name + "'", [], onSuccess);
-  //   });
-  // }
+  function addAccount (name, currency, initialBalance, onSuccess, onError) {
+    db.transaction(function (tx) {
+      tx.executeSql("INSERT INTO ACCOUNTS (name, currency, initialBalance) VALUES (?, ?, ?)", [name, currency, initialBalance], onSuccess, onError);
+    });
+  }
+
+  function getAccounts (onSuccess) {
+    db.transaction(function (tx) {
+      tx.executeSql("SELECT rowid, * FROM ACCOUNTS", [], onSuccess);
+    });
+  }
+
+  function getAccount (id, onSuccess) {
+    db.transaction(function (tx) {
+      tx.executeSql("SELECT rowid, * FROM ACCOUNTS WHERE rowid = ?", [id], onSuccess);
+    });
+  }
+
+  /*
+  * Services
+  */
+
+  function register(user, password, onSuccess) {
+    $.ajax({
+      url: "http://finanzapersonal.tribus.com.uy/registrar",
+      type: "POST",
+      dataType: "json",
+      data: {
+        user: user,
+        password: password
+      },
+      success: onSuccess
+    });
+  }
+
+  function login(user, password, onSuccess){
+    $.ajax({
+      url: "http://finanzapersonal.tribus.com.uy/login",
+      type: "GET",
+      dataType: "json",
+      data: {
+        user: user,
+        password: password
+      },
+      success: onSuccess
+    });
+  }
+
   function addExpensesToAccount (importe, fecha, categoria, onSuccess){
     db.transaction(function(tx){
       tx.executeSql("INSERT INTO ACCOUNT (tipo, importe, fecha, categoria) values ('"+ "Gasto" + "','" + importe +"','" + fecha +"','"+ categoria +"')", [], onSuccess);
     });
   }
+
   function addIncomesToAccount (importe, fecha, categoria, onSuccess){
     db.transaction(function(tx){
       tx.executeSql("INSERT INTO ACCOUNT (tipo, importe, fecha, categoria) values ('"+ "Ingreso" + "','" + importe +"','" + fecha +"','"+ categoria +"')", [], onSuccess);
@@ -195,35 +277,85 @@
     </div>
   </div>
 
-  <div data-role="page" id="firstEntry">
+  <div data-role="page" id="add-account">
     <div data-role="header" data-add-back-btn="true">
       <h1>Menu</h1>
       <p><a href="#home" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Home</a></p>
     </div>
     <div data-role="main" class="ui-content">
       <div>
-        <form method="post" action="demoform.asp">
+        <form>
           <div class="ui-field-contain">
-            <label for="fullname">Nombre: </label>
-            <input type="text" name="fullname" id="fullname">
+            <label for="add-account-name">Nombre: </label>
+            <input type="text" name="add-account-name" id="add-account-name">
           </div>
           <div class="ui-field-contain">
-            <label for="currency">Moneda: </label>
-            <select name="currency" id="currency" data-native-menu="false">
+            <label for="add-account-currency">Moneda: </label>
+            <select name="add-account-currency" id="add-account-currency" data-native-menu="false">
               <option value="usd">Dólares</option>
               <option value="uyu">Peso Uruguayo</option>
             </select>
           </div>
           <div class="ui-field-contain">
-            <label for="balance">Saldo inicial:</label>
-            <input type="text" name="email" id="balance" placeholder="Ingrese el importe">
+            <label for="add-account-balance">Saldo inicial:</label>
+            <input type="text" name="add-account-balance" id="add-account-balance" placeholder="Ingrese el importe">
           </div>
           <div class="ui-field-contain">
-            <a href="#menu" data-role="button"  data-theme="b">Guardar</a>
+            <a id="add-account-save" data-role="button"  data-theme="b">Guardar</a>
           </div>
         </div>
       </form>
     </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="update-account">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Menu</h1>
+      <p><a href="#home" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Home</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <div>
+        <form method="post">
+          <div class="ui-field-contain">
+            <label for="update-account-id">Id: </label>
+            <input type="text" name="update-account-id" id="update-account-id" readonly>
+          </div>
+          <div class="ui-field-contain">
+            <label for="update-account-name">Nombre: </label>
+            <input type="text" name="update-account-name" id="update-account-name">
+          </div>
+          <div class="ui-field-contain">
+            <label for="update-account-currency">Moneda: </label>
+            <input type="text" name="update-account-currency" id="update-account-currency" readonly>
+          </div>
+          <div class="ui-field-contain">
+            <label for="update-account-balance">Balance: </label>
+            <input type="text" name="update-account-balance" id="update-account-balance" readonly>
+          </div>
+          <div class="ui-field-contain">
+            <a id="update-account-save" data-role="button" data-theme="b">Actualizar</a>
+            <a id="update-account-delete" data-role="button" data-theme="b">Eliminar</a>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div data-role="footer" data-position="fixed"  data-id="footer">
+      <h1>Footer Text</h1>
+    </div>
+  </div>
+
+  <div data-role="page" id="list-accounts">
+    <div data-role="header" data-add-back-btn="true">
+      <h1>Menu</h1>
+      <p><a href="#home" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Home</a></p>
+    </div>
+    <div data-role="main" class="ui-content">
+      <ul id="list-accounts-list" data-role="listview">
+        <!-- TODO: Aca van las cuentas -->
+      </ul>
     <div data-role="footer" data-position="fixed"  data-id="footer">
       <h1>Footer Text</h1>
     </div>
