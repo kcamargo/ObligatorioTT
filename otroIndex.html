@@ -69,7 +69,7 @@
           $.mobile.loading("hide");
           isLogged = data.resultado_operacion === "OK" && data.resultado_login;
           if (isLogged) {
-            $.mobile.changePage( "#menu", { transition: "slideup"} );
+            $.mobile.changePage( "#home", { transition: "slideup"} );
           } else {
             // TODO: Implementar
           }
@@ -79,14 +79,38 @@
 
       $("#add-account-save").bind("tap", function () {
         $.mobile.loading("show");
-        var name =  $("#add-account-name").val();
+        var name = $("#add-account-name").val();
         var currency = $('#add-account-currency').val();
         var balance = Number($("#add-account-balance").val());
+        var onSuccess = function (tx, result) {
+          var onEntrySuccess = function (tx, data) {
+            $.mobile.loading("hide");
+            $.mobile.changePage( "#list-accounts", { transition: "slideup"} );
+          };
+          addEntry(result.insertId, new Date(), "Balance Inicial", balance, onEntrySuccess);
+        };
+        addAccount(name, currency, balance, onSuccess);
+      });
+
+      $("#update-account-save").bind("tap", function () {
+        $.mobile.loading("show");
+        var id = Number($("#update-account-id").val());
+        var name = $("#update-account-name").val();
         var onSuccess = function () {
           $.mobile.loading("hide");
           $.mobile.changePage( "#list-accounts", { transition: "slideup"} );
         };
-        addAccount(name, currency, balance, onSuccess);
+        updateAccount(id, name, onSuccess);
+      });
+
+      $("#update-account-delete").bind ("tap", function () {
+        $.mobile.loading("show");
+        var id = Number($("#update-account-id").val());
+        var onSuccess = function () {
+          $.mobile.loading("hide");
+          $.mobile.changePage("#list-accounts", {transition: "slideup"});
+        };
+        deleteAccount(id, onSuccess)
       });
 
       $(document).bind("pagechange", function (event, data) {
@@ -94,6 +118,7 @@
         if (data.toPage.attr("id") === "list-accounts") {
           var onSuccess = function (tx, result) {
             var accounts = result.rows;
+            $("#list-accounts-list").html("");
             for (var i = 0; i < accounts.length; i++) {
               $("#list-accounts-list").append("<li><a href='#update-account' data-id='" + accounts[i].rowid + "'>" + accounts[i].name + " " + accounts[i].currency + " (" + accounts[i].initialBalance + ")</a></li>");
             }
@@ -104,8 +129,8 @@
 
         if (data.toPage.attr("id") === "update-account") {
           var id = $(data.options.link).data("id");
-          var onSuccess = function (account) {
-            debugger
+          var onSuccess = function (tx, result) {
+            var account = result.rows[0];
             $.mobile.loading("hide");
             $("#update-account-id").val(account.rowid);
             $("#update-account-name").val(account.name);
@@ -116,6 +141,16 @@
         }
       });
 
+      $("#transaction-type").bind("change", function(event, ui) {
+          if ($(this).val() === "ingreso") {
+            $("#expense-category-income").parents(".ui-field-contain").show();
+            $("#expense-category-outcome").parents(".ui-field-contain").hide();
+          } else {
+            $("#expense-category-outcome").parents(".ui-field-contain").show();
+            $("#expense-category-income").parents(".ui-field-contain").hide();
+          }
+      });
+
   });
 
   function loadExpensesCategories(){
@@ -123,16 +158,13 @@
       type: "GET",
       dataType: "json",
       url: "http://finanzapersonal.tribus.com.uy/categoriasGastos",
-      // success: function(data) {
-      //   showListExpenses(data);
-      // }
-      success: showListExpenses
+      success: onOutcomeCategoriesLoad
     });
   }
 
-  function showListExpenses(expenses) {
+  function onOutcomeCategoriesLoad(expenses) {
     for (var i = 0; i < expenses.length ; i++) {
-      $('#category').append("<option value="+ i +">" + expenses[i] +"</option>");
+      $('#expense-category-outcome').append("<option value="+ i +">" + expenses[i] +"</option>");
     }
   }
 
@@ -141,13 +173,13 @@
       type: "GET",
       dataType: "json",
       url: "http://finanzapersonal.tribus.com.uy/categoriasIngresos",
-      success: showListIncome
+      success: onIncomeCategoriesLoad
     });
   }
 
-  function showListIncome(income){
+  function onIncomeCategoriesLoad(income){
     for(var i = 0; i < income.length ; i++){
-      $('#clientDdl').append("<option value="+ i +">" + income[i] +"</option>");
+      $('#expense-category-income').append("<option value="+ i +">" + income[i] +"</option>");
     }
   }
 
@@ -158,6 +190,7 @@
   function initializeDB (onError, onSuccess) {
     db.transaction(function (tx) {
       tx.executeSql("CREATE TABLE IF NOT EXISTS ACCOUNTS (name, currency, initialBalance)", []);
+      tx.executeSql("CREATE TABLE IF NOT EXISTS ENTRIES (account, date, category, amount)", []);
     });
   }
 
@@ -167,15 +200,39 @@
     });
   }
 
-  function getAccounts (onSuccess) {
+  function getAccounts (onSuccess, onError) {
     db.transaction(function (tx) {
-      tx.executeSql("SELECT rowid, * FROM ACCOUNTS", [], onSuccess);
+      tx.executeSql("SELECT rowid, * FROM ACCOUNTS", [], onSuccess, onError);
     });
   }
 
-  function getAccount (id, onSuccess) {
+  function getAccount (id, onSuccess, onError) {
     db.transaction(function (tx) {
-      tx.executeSql("SELECT rowid, * FROM ACCOUNTS WHERE rowid = ?", [id], onSuccess);
+      tx.executeSql("SELECT rowid, * FROM ACCOUNTS WHERE rowid = ? LIMIT 1", [id], onSuccess, onError);
+    });
+  }
+
+  function updateAccount (id, name, onSuccess, onError) {
+    db.transaction(function (tx) {
+      tx.executeSql("UPDATE ACCOUNTS SET name = ? WHERE rowid = ?", [name, id], onSuccess, onError);
+    });
+  }
+
+  function deleteAccount (id, onSuccess, onError) {
+    db.transaction (function (tx){
+      tx.executeSql ("DELETE FROM ACCOUNTS WHERE rowid = ?", [id] , onSuccess, onError);
+    });
+  }
+
+  function addEntry (account, date, category, amount, onSuccess, onError) {
+    db.transaction (function (tx) {
+      tx.executeSql ("INSERT INTO ENTRIES (account, date, category, amount) VALUES (?, ?, ?, ?)", [account, date, category, amount], onSuccess, onError);
+    });
+  }
+
+  function deleteEntry (id, onSuccess, onError){
+    db.transaction (function (tx) { //modificar para que solo borre la ultima
+      tx.executeSql ("DELETE FROM ENTRIES WHERE rowid = ?", [id], onSuccess, onError)
     });
   }
 
@@ -226,7 +283,7 @@
 
   </script>
 
-  <div data-role="page" id="home">
+  <div data-role="page" id="login">
     <div data-role="header">
       <h1>Login</h1>
     </div>
@@ -356,20 +413,24 @@
       <ul id="list-accounts-list" data-role="listview">
         <!-- TODO: Aca van las cuentas -->
       </ul>
-    <div data-role="footer" data-position="fixed"  data-id="footer">
-      <h1>Footer Text</h1>
+      <div class="ui-field-contain">
+        <a href="#add-account" id="add-account-list" data-role="button" data-theme="b">Agregar Cuenta</a>
+      </div>
+      <div data-role="footer" data-position="fixed"  data-id="footer">
+        <h1>Footer Text</h1>
+      </div>
     </div>
   </div>
 
-  <div data-role="page" id="menu">
+  <div data-role="page" id="home">
     <div data-role="header" data-add-back-btn="true">
       <h1>Menu</h1>
       <p><a href="#home" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Home</a></p>
     </div>
     <div data-role="main" class="ui-content">
       <div data-role="controlgroup" data-type="vertical">
-        <a href="#expenses" data-role="button">Agregar Gasto</a>
-        <a href="#income" data-role="button">Agregar Ingreso</a>
+        <a href="#list-accounts" data-role="button">Cuentas</a>
+        <a href="#entries" data-role="button">Movimientos</a>
         <a href="#account" data-role="button">Estado de cuenta</a>
       </div>
     </div>
@@ -378,48 +439,40 @@
     </div>
   </div>
 
-  <div data-role="page" id="expenses">
+  <div data-role="page" id="entries">
     <div data-role="header" data-add-back-btn="true">
-      <h1>Gastos</h1>
+      <h1>Movimientos</h1>
       <p><a href="#menu" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Menu</a></p>
     </div>
     <div data-role="main" class="ui-content">
       <div>
         <form method="post" action="demoform.asp">
           <div class="ui-field-contain">
-            <label for="expenseDate">Fecha: </label>
-            <input type="date" name="expenseDate" id="expensesDate">
-          </div>
-          <div class="ui-field-contain">
-            <label for="expenseAmount">Importe: </label>
-            <input type="text" name="expenseAmount" id="expensesAmount">
-          </div>
-          <div class="ui-field-contain">
-            <label for="categoryLabel">Categoria: </label>
-            <select name="category" id="category" data-native-menu="false"></select>
-          </div>
-          <div class="ui-field-contain">
-            <label for="switch">Repetir:</label>
-            <input type="checkbox" data-role="flipswitch" name="switch" id="switch" data-inline="true" checked>
-          </div>
-          <div class="ui-field-contain" id="repeat">
-            <label for="repeatTypeLabel">Cada: </label>
-            <select name="repeatType" id="repeatType" data-native-menu="false">
-              <option value="month">Mes</option>
-              <option value="day">Dia</option>
-              <option value="week">Semana</option>
+            <label for="transaction-type">Transacción: </label>
+            <select name="transaction-type" id="transaction-type" data-native-menu="false">
+              <option value="gasto" selected>Gasto</option>
+              <option value="ingreso">Ingreso</option>
             </select>
           </div>
           <div class="ui-field-contain">
-            <label for="repeatDeadline">Termina en: </label>
-            <input type="date" name="repeatDeadline" id="repeatDeadline">
+            <label for="expense-date">Fecha: </label>
+            <input type="date" name="expense-date" id="expense-date">
           </div>
           <div class="ui-field-contain">
-            <label for="noteExpenses">Nota: </label>
-            <textarea name="noteExpenses" id="noteExpenses"></textarea>
+            <label for="expense-amount">Importe: </label>
+            <input type="text" name="expense-amount" id="expense-amount">
+          </div>
+
+          <div class="ui-field-contain">
+            <label for="expense-category-outcome">Categoria: </label>
+            <select name="expense-category-outcome" id="expense-category-outcome" data-native-menu="false"></select>
+          </div>
+          <div class="ui-field-contain" style="display: none;">
+            <label for="expense-category-income">Categoria: </label>
+            <select name="expense-category-income" id="expense-category-income" data-native-menu="false"></select>
           </div>
           <div class="ui-field-contain">
-              <a id='addExpenses-button' data-role='button'>Entrar</a>
+              <a id='expense-save-button' data-role='button'>Entrar</a>
           </div>
         </div>
       </form>
@@ -429,43 +482,6 @@
     </div>
   </div>
 
-  <div data-role="page" id="income">
-    <div data-role="header" data-add-back-btn="true">
-      <h1>Ingresos</h1>
-      <p><a href="#menu" class="ui-btn-right ui-btn ui-btn-inline ui-mini ui-corner-all ui-btn-icon-right">Menu</a></p>
-    </div>
-    <div data-role="main" class="ui-content">
-      <form method="post" action="demoform.asp">
-        <div class="ui-field-contain">
-          <label for="incomeDate">Fecha: </label>
-          <input type="date" name="incomeDate" id="incomeDate">
-        </div>
-        <div class="ui-field-contain">
-          <label for="incomeAmount">Importe: </label>
-          <input type="text" name="incomeAmount" id="incomeAmount">
-        </div>
-        <div class="ui-field-contain">
-          <label for="clientLabel">Categoria: </label>
-          <select name="clientDdl" id="clientDdl" data-native-menu="false">
-
-          </select>
-        </div>
-        <div class="ui-field-contain">
-          <a href="#AddClient" class="ui-btn ui-shadow ui-corner-all ui-icon-plus ui-btn-icon-notext" data-inline="true" data-mini="true"></a>
-        </div>
-        <div class="ui-field-contain">
-          <label for="noteExpenses">Nota: </label>
-          <textarea name="noteExpenses" id="noteExpenses"></textarea>
-        </div>
-        <div class="ui-field-contain">
-          <a id='addIncome-button' data-role='button'>Guardar</a>
-        </div>
-      </form>
-    </div>
-    <div data-role="footer" data-position="fixed" data-id="footer">
-      <h1>Footer Text</h1>
-    </div>
-  </div>
 
   <div data-role="page" id="transfer">
     <div data-role="header" data-add-back-btn="true">
